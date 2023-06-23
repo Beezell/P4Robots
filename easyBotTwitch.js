@@ -25,9 +25,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importDefault(require("mongoose"));
 //Je crée un schéma qui correspond à mon interface
 const gameSchema = new mongoose_1.default.Schema({
+    //INFO get TopGames Twitch
     _id: String,
     name: String,
     igdbId: String,
+    //INFO get Games Igdb
+    summary: String
 });
 //Je crée mon Model
 const GameModel = mongoose_1.default.model("Game", gameSchema);
@@ -76,18 +79,24 @@ function createGames(url, authorization, clientId) {
         try {
             //BOUCLE : pour parcourir les pages de résultats TANT QUE url!=null
             while (url) {
-                const game = yield sendTwitchRequest(url, authorization, clientId);
+                const gameTopGame = yield sendTwitchRequest(url, authorization, clientId);
                 //Je récupère les données de mes jeux et je stock dans mon currentGame
-                for (let i = 0; i < game.data.length; i++) {
-                    const currentGame = {
-                        id: game.data[i].id,
-                        name: game.data[i].name,
-                        igdbId: game.data[i].igdb_id,
+                for (let i = 0; i < gameTopGame.data.length; i++) {
+                    let currentGame = {
+                        id: gameTopGame.data[i].id,
+                        name: gameTopGame.data[i].name,
+                        igdbId: gameTopGame.data[i].igdb_id,
+                        summary: ""
                     };
+                    //Requete pour Get Game API Igdb
+                    let urlIgdb = `https://api.igdb.com/v4/games/${currentGame.igdbId}?fields=name,summary,genres.name,platforms.name,cover.image_id,first_release_date,involved_companies.company.name`;
+                    const gameIgdb = yield sendTwitchRequest(urlIgdb, authorization, clientId);
+                    //Je récupère mon summary
+                    currentGame.summary = gameIgdb[0].summary;
                     yield updateGame(currentGame);
                 }
                 //MAJ de l'ur de la page suivante
-                url = game.pagination.cursor !== null ? `${url}?first=100&after=${game.pagination.cursor}` : "";
+                url = gameTopGame.pagination.cursor !== null ? `${url}?first=100&after=${gameTopGame.pagination.cursor}` : "";
             }
         }
         catch (error) {
@@ -95,21 +104,17 @@ function createGames(url, authorization, clientId) {
         }
     });
 }
-//Requête pour compléter la fiche du game avec les info de IGDB
-function editGamesWitchGetGame(url, authorization, clientId) {
-    return __awaiter(this, void 0, void 0, function* () {
-    });
-}
 //Méthode pour update ma database avec mon currentGame
 function updateGame(gameData) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { id, name, igdbId } = gameData;
+        const { id, name, igdbId, summary } = gameData;
         try {
             //Recherche du game existant avec l'ID actuel
             const existingGame = yield GameModel.findById(id);
             if (existingGame) {
                 existingGame.name = name;
                 existingGame.igdbId = igdbId;
+                existingGame.summary = summary;
                 yield existingGame.save();
             }
             else {
@@ -118,6 +123,7 @@ function updateGame(gameData) {
                     _id: id,
                     name,
                     igdbId,
+                    summary
                 });
                 yield newGame.save();
             }

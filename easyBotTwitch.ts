@@ -12,9 +12,12 @@ import mongoose from "mongoose";
 
 //Je crée un schéma qui correspond à mon interface
 const gameSchema = new mongoose.Schema({
-  _id: String,
-  name: String,
-  igdbId: String,
+    //INFO get TopGames Twitch
+    _id: String,
+    name: String,
+    igdbId: String,
+    //INFO get Games Igdb
+    summary: String
 });
 
 //Je crée mon Model
@@ -69,37 +72,37 @@ async function createGames(url: any, authorization: any, clientId: any){
         //BOUCLE : pour parcourir les pages de résultats TANT QUE url!=null
         while (url){
 
-            const game = await sendTwitchRequest(url, authorization, clientId);
+            const gameTopGame = await sendTwitchRequest(url, authorization, clientId);
 
             //Je récupère les données de mes jeux et je stock dans mon currentGame
-            for (let i = 0; i < game.data.length; i++){
-                const currentGame = {
-                    id: game.data[i].id,
-                    name: game.data[i].name,
-                    igdbId: game.data[i].igdb_id,
+            for (let i = 0; i < gameTopGame.data.length; i++){
+                let currentGame = {
+                    id: gameTopGame.data[i].id,
+                    name: gameTopGame.data[i].name,
+                    igdbId: gameTopGame.data[i].igdb_id,
+                    summary: ""
                 }
 
- 
+                //Requete pour Get Game API Igdb
+                let urlIgdb = `https://api.igdb.com/v4/games/${currentGame.igdbId}?fields=name,summary,genres.name,platforms.name,cover.image_id,first_release_date,involved_companies.company.name`
+                const gameIgdb = await sendTwitchRequest(urlIgdb, authorization, clientId);
+
+                //Je récupère mon summary
+                currentGame.summary = gameIgdb[0].summary;
+                
                 await updateGame(currentGame);
             }
             //MAJ de l'ur de la page suivante
-            url = game.pagination.cursor !== null ? `${url}?first=100&after=${game.pagination.cursor}` : "";
+            url = gameTopGame.pagination.cursor !== null ? `${url}?first=100&after=${gameTopGame.pagination.cursor}` : "";
         }
     }catch (error){
         console.log("Ton Game Top il est pas ouf mais ça tu le sais : " + error);
     }
 }
 
-//Requête pour compléter la fiche du game avec les info de IGDB
-async function editGamesWitchGetGame(url: any, authorization: any, clientId: any){
-
-
-
-}
-
 //Méthode pour update ma database avec mon currentGame
 async function updateGame(gameData: any) {
-    const { id, name, igdbId } = gameData;
+    const { id, name, igdbId, summary } = gameData;
   
     try {
         //Recherche du game existant avec l'ID actuel
@@ -108,6 +111,7 @@ async function updateGame(gameData: any) {
       if (existingGame) {
         existingGame.name = name;
         existingGame.igdbId = igdbId;
+        existingGame.summary = summary;
         await existingGame.save();
       } else {
         //Le game n'existe pas donc création d'un nouveau
@@ -115,6 +119,7 @@ async function updateGame(gameData: any) {
           _id: id,
           name,
           igdbId,
+          summary
         });
         await newGame.save();
       }

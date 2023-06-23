@@ -30,20 +30,14 @@ const gameSchema = new mongoose_1.default.Schema({
     name: String,
     igdbId: String,
     //INFO get Games Igdb
-    summary: String,
     firstReleaseDate: Date,
-    //genres: [String],
+    genres: [],
+    summary: String,
+    platforms: [],
+    involvedCompanies: []
 });
 //Je crée mon Model
 const GameModel = mongoose_1.default.model("Game", gameSchema);
-// Pour mon objet game qui est un topGame
-class GameTopObject {
-    constructor(id, name, igdbId) {
-        this.id = id;
-        this.name = name;
-        this.igdbId = igdbId;
-    }
-}
 //Méthode qui cherche mes Games et qui les enregistre sur MongoDB
 function fetchGame() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -89,6 +83,9 @@ function createGames(url, authorization, clientId) {
                         name: gameTopGame.data[i].name,
                         igdbId: gameTopGame.data[i].igdb_id,
                         summary: "",
+                        genres: [],
+                        platforms: [],
+                        involvedCompanies: [],
                         firstReleaseDate: new Date(1972, 5, 18), //cette date par défaut car 1972 est l'année de la cation du permier jeuw-vidéo et je suis née le 18/05. Des bisous
                     };
                     //Requete pour Get Game API Igdb
@@ -98,6 +95,22 @@ function createGames(url, authorization, clientId) {
                     //Pour gérer lors qu'il n'y pas de firstReleaseDate
                     if (gameIgdb[0].first_release_date != undefined) {
                         currentGame.firstReleaseDate = convertUnixEpochToDate(gameIgdb[0].first_release_date);
+                    }
+                    //Toutes les données avec les tableaux : genres / platforms / incolvedCompanies
+                    if (gameIgdb[0].genres != undefined) {
+                        for (let i = 0; i < gameIgdb[0].genres.length; i++) {
+                            currentGame.genres.push(gameIgdb[0].genres[i].name);
+                        }
+                    }
+                    if (gameIgdb[0].platforms != undefined) {
+                        for (let i = 0; i < gameIgdb[0].platforms.length; i++) {
+                            currentGame.platforms.push(gameIgdb[0].platforms[i].name);
+                        }
+                    }
+                    if (gameIgdb[0].involved_companies != undefined) {
+                        for (let i = 0; i < gameIgdb[0].involved_companies.length; i++) {
+                            currentGame.involvedCompanies.push(gameIgdb[0].involved_companies[i].name);
+                        }
                     }
                     currentGame.summary = gameIgdb[0].summary;
                     yield updateGame(currentGame);
@@ -114,15 +127,18 @@ function createGames(url, authorization, clientId) {
 //Méthode pour update ma database avec mon currentGame
 function updateGame(gameData) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { id, name, igdbId, summary, firstReleaseDate } = gameData;
+        const { id, name, igdbId, summary, firstReleaseDate, genres, platforms, incolvedCompanies } = gameData;
         try {
             //Recherche du game existant avec l'ID actuel
             const existingGame = yield GameModel.findById(id);
             if (existingGame) {
                 existingGame.name = name;
                 existingGame.igdbId = igdbId;
-                existingGame.summary = summary;
                 existingGame.firstReleaseDate = firstReleaseDate;
+                existingGame.genres = genres;
+                existingGame.platforms = platforms;
+                existingGame.involvedCompanies = incolvedCompanies;
+                existingGame.summary = summary;
                 yield existingGame.save();
             }
             else {
@@ -131,8 +147,11 @@ function updateGame(gameData) {
                     _id: id,
                     name,
                     igdbId,
+                    firstReleaseDate,
+                    genres,
+                    platforms,
+                    incolvedCompanies,
                     summary,
-                    firstReleaseDate
                 });
                 yield newGame.save();
             }

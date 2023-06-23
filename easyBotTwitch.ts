@@ -17,22 +17,15 @@ const gameSchema = new mongoose.Schema({
     name: String,
     igdbId: String,
     //INFO get Games Igdb
-    summary: String,
     firstReleaseDate: Date,
-    //genres: [String],
+    genres: [],
+    summary: String,
+    platforms: [],
+    involvedCompanies: []
 });
 
 //Je crée mon Model
 const GameModel = mongoose.model("Game", gameSchema);
-
-// Pour mon objet game qui est un topGame
-class GameTopObject {
-  constructor(
-    public id?: string,
-    public name?: string,
-    public igdbId?: string, 
-  ) {}
-}
 
 //Méthode qui cherche mes Games et qui les enregistre sur MongoDB
 async function fetchGame(){
@@ -42,8 +35,6 @@ async function fetchGame(){
 
     //Requête Get TopGames API Twitch
     const urlGetTopGames = "https://api.twitch.tv/helix/games/top"
-
-
     try{
         let url = urlGetTopGames;
         await createGames(url, authorization, clientId);
@@ -83,6 +74,9 @@ async function createGames(url: any, authorization: any, clientId: any){
                     name: gameTopGame.data[i].name,
                     igdbId: gameTopGame.data[i].igdb_id,
                     summary: "",
+                    genres: [] as string[],
+                    platforms: [] as string[],
+                    involvedCompanies: [] as string[],
                     firstReleaseDate: new Date(1972,5,18),//cette date par défaut car 1972 est l'année de la cation du permier jeuw-vidéo et je suis née le 18/05. Des bisous
                 }
 
@@ -91,13 +85,28 @@ async function createGames(url: any, authorization: any, clientId: any){
                 const gameIgdb = await sendTwitchRequest(urlIgdb, authorization, clientId);
 
                 //Je récupère les données des games et les stocks dans le currentGame
-
-
+                
                 //Pour gérer lors qu'il n'y pas de firstReleaseDate
                 if(gameIgdb[0].first_release_date!=undefined){
                     currentGame.firstReleaseDate = convertUnixEpochToDate(gameIgdb[0].first_release_date);
                 }
-                
+
+                //Toutes les données avec les tableaux : genres / platforms / incolvedCompanies
+                if(gameIgdb[0].genres!=undefined){
+                    for (let i = 0; i < gameIgdb[0].genres.length; i++) {
+                        currentGame.genres.push(gameIgdb[0].genres[i].name);
+                    }
+                }
+                if(gameIgdb[0].platforms!=undefined){
+                    for (let i = 0; i < gameIgdb[0].platforms.length; i++) {
+                        currentGame.platforms.push(gameIgdb[0].platforms[i].name);
+                    }
+                }
+                if(gameIgdb[0].involved_companies!=undefined){
+                    for (let i = 0; i < gameIgdb[0].involved_companies.length; i++) {
+                        currentGame.involvedCompanies.push(gameIgdb[0].involved_companies[i].name);
+                    }
+                }
                 currentGame.summary = gameIgdb[0].summary;
                 
                 await updateGame(currentGame);
@@ -112,7 +121,7 @@ async function createGames(url: any, authorization: any, clientId: any){
 
 //Méthode pour update ma database avec mon currentGame
 async function updateGame(gameData: any) {
-    const { id, name, igdbId, summary, firstReleaseDate } = gameData;
+    const { id, name, igdbId, summary, firstReleaseDate, genres, platforms, incolvedCompanies } = gameData;
   
     try {
         //Recherche du game existant avec l'ID actuel
@@ -121,8 +130,12 @@ async function updateGame(gameData: any) {
       if (existingGame) {
         existingGame.name = name;
         existingGame.igdbId = igdbId;
+        existingGame.firstReleaseDate = firstReleaseDate;
+        existingGame.genres = genres;
+        existingGame.platforms = platforms;
+        existingGame.involvedCompanies = incolvedCompanies;
         existingGame.summary = summary;
-        existingGame.firstReleaseDate = firstReleaseDate
+
         await existingGame.save();
       } else {
         //Le game n'existe pas donc création d'un nouveau
@@ -130,8 +143,11 @@ async function updateGame(gameData: any) {
           _id: id,
           name,
           igdbId,
+          firstReleaseDate,
+          genres,
+          platforms,
+          incolvedCompanies,
           summary,
-          firstReleaseDate
         });
         await newGame.save();
       }

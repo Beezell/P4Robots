@@ -30,7 +30,9 @@ const gameSchema = new mongoose_1.default.Schema({
     name: String,
     igdbId: String,
     //INFO get Games Igdb
-    summary: String
+    summary: String,
+    firstReleaseDate: Date,
+    //genres: [String],
 });
 //Je crée mon Model
 const GameModel = mongoose_1.default.model("Game", gameSchema);
@@ -86,12 +88,17 @@ function createGames(url, authorization, clientId) {
                         id: gameTopGame.data[i].id,
                         name: gameTopGame.data[i].name,
                         igdbId: gameTopGame.data[i].igdb_id,
-                        summary: ""
+                        summary: "",
+                        firstReleaseDate: new Date(1972, 5, 18), //cette date par défaut car 1972 est l'année de la cation du permier jeuw-vidéo et je suis née le 18/05. Des bisous
                     };
                     //Requete pour Get Game API Igdb
                     let urlIgdb = `https://api.igdb.com/v4/games/${currentGame.igdbId}?fields=name,summary,genres.name,platforms.name,cover.image_id,first_release_date,involved_companies.company.name`;
                     const gameIgdb = yield sendTwitchRequest(urlIgdb, authorization, clientId);
-                    //Je récupère mon summary
+                    //Je récupère les données des games et les stocks dans le currentGame
+                    //Pour gérer lors qu'il n'y pas de firstReleaseDate
+                    if (gameIgdb[0].first_release_date != undefined) {
+                        currentGame.firstReleaseDate = convertUnixEpochToDate(gameIgdb[0].first_release_date);
+                    }
                     currentGame.summary = gameIgdb[0].summary;
                     yield updateGame(currentGame);
                 }
@@ -107,7 +114,7 @@ function createGames(url, authorization, clientId) {
 //Méthode pour update ma database avec mon currentGame
 function updateGame(gameData) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { id, name, igdbId, summary } = gameData;
+        const { id, name, igdbId, summary, firstReleaseDate } = gameData;
         try {
             //Recherche du game existant avec l'ID actuel
             const existingGame = yield GameModel.findById(id);
@@ -115,6 +122,7 @@ function updateGame(gameData) {
                 existingGame.name = name;
                 existingGame.igdbId = igdbId;
                 existingGame.summary = summary;
+                existingGame.firstReleaseDate = firstReleaseDate;
                 yield existingGame.save();
             }
             else {
@@ -123,7 +131,8 @@ function updateGame(gameData) {
                     _id: id,
                     name,
                     igdbId,
-                    summary
+                    summary,
+                    firstReleaseDate
                 });
                 yield newGame.save();
             }
@@ -132,6 +141,12 @@ function updateGame(gameData) {
             console.error("Erreur lors de l'enregistrement du game :", error);
         }
     });
+}
+//Méthode pour convertire ma donné récupéré en unix Epoch en une date
+function convertUnixEpochToDate(unixEpoch) {
+    const milliseconds = unixEpoch * 1000;
+    const date = new Date(milliseconds);
+    return date;
 }
 function display() {
     return __awaiter(this, void 0, void 0, function* () {

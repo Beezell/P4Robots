@@ -17,7 +17,9 @@ const gameSchema = new mongoose.Schema({
     name: String,
     igdbId: String,
     //INFO get Games Igdb
-    summary: String
+    summary: String,
+    firstReleaseDate: Date,
+    //genres: [String],
 });
 
 //Je crée mon Model
@@ -80,14 +82,22 @@ async function createGames(url: any, authorization: any, clientId: any){
                     id: gameTopGame.data[i].id,
                     name: gameTopGame.data[i].name,
                     igdbId: gameTopGame.data[i].igdb_id,
-                    summary: ""
+                    summary: "",
+                    firstReleaseDate: new Date(1972,5,18),//cette date par défaut car 1972 est l'année de la cation du permier jeuw-vidéo et je suis née le 18/05. Des bisous
                 }
 
                 //Requete pour Get Game API Igdb
                 let urlIgdb = `https://api.igdb.com/v4/games/${currentGame.igdbId}?fields=name,summary,genres.name,platforms.name,cover.image_id,first_release_date,involved_companies.company.name`
                 const gameIgdb = await sendTwitchRequest(urlIgdb, authorization, clientId);
 
-                //Je récupère mon summary
+                //Je récupère les données des games et les stocks dans le currentGame
+
+
+                //Pour gérer lors qu'il n'y pas de firstReleaseDate
+                if(gameIgdb[0].first_release_date!=undefined){
+                    currentGame.firstReleaseDate = convertUnixEpochToDate(gameIgdb[0].first_release_date);
+                }
+                
                 currentGame.summary = gameIgdb[0].summary;
                 
                 await updateGame(currentGame);
@@ -102,7 +112,7 @@ async function createGames(url: any, authorization: any, clientId: any){
 
 //Méthode pour update ma database avec mon currentGame
 async function updateGame(gameData: any) {
-    const { id, name, igdbId, summary } = gameData;
+    const { id, name, igdbId, summary, firstReleaseDate } = gameData;
   
     try {
         //Recherche du game existant avec l'ID actuel
@@ -112,6 +122,7 @@ async function updateGame(gameData: any) {
         existingGame.name = name;
         existingGame.igdbId = igdbId;
         existingGame.summary = summary;
+        existingGame.firstReleaseDate = firstReleaseDate
         await existingGame.save();
       } else {
         //Le game n'existe pas donc création d'un nouveau
@@ -119,7 +130,8 @@ async function updateGame(gameData: any) {
           _id: id,
           name,
           igdbId,
-          summary
+          summary,
+          firstReleaseDate
         });
         await newGame.save();
       }
@@ -127,6 +139,14 @@ async function updateGame(gameData: any) {
       console.error("Erreur lors de l'enregistrement du game :", error);
     }
   }
+
+  //Méthode pour convertire ma donné récupéré en unix Epoch en une date
+function convertUnixEpochToDate(unixEpoch:any){
+    const milliseconds = unixEpoch * 1000;
+    const date = new Date(milliseconds);
+
+    return date
+}
 
 async function display() {
     //J'ouvre le flux vers mongoDB et je remplis la db

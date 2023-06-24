@@ -23,7 +23,23 @@ Object.defineProperty(exports, "__esModule", { value: true });
 --------------------------------------------------------------------
 */
 const mongoose_1 = __importDefault(require("mongoose"));
-//Je crée un schéma qui correspond à mon interface
+//Objet Streams pour le Game
+class Stream {
+    constructor(streamer, title, language, viewerCount) {
+        this.streamer = streamer;
+        this.title = title;
+        this.language = language;
+        this.viewerCount = viewerCount;
+    }
+}
+//Je crée un schéma pour mon Streams
+const streamsSchema = new mongoose_1.default.Schema({
+    streamer: String,
+    title: String,
+    language: String,
+    viewerCount: Number
+});
+//Je crée un schéma pour mon game
 const gameSchema = new mongoose_1.default.Schema({
     //INFO get TopGames Twitch
     _id: String,
@@ -34,7 +50,8 @@ const gameSchema = new mongoose_1.default.Schema({
     genres: [],
     summary: String,
     platforms: [],
-    involvedCompanies: []
+    involvedCompanies: [],
+    streams: [streamsSchema],
 });
 //Je crée mon Model
 const GameModel = mongoose_1.default.model("Game", gameSchema);
@@ -78,45 +95,59 @@ function createGames(url, authorization, clientId) {
                 const gameTopGame = yield sendTwitchRequest(url, authorization, clientId);
                 //Je récupère les données de mes jeux et je stock dans mon currentGame
                 for (let i = 0; i < gameTopGame.data.length; i++) {
-                    let currentGame = {
-                        id: gameTopGame.data[i].id,
-                        name: gameTopGame.data[i].name,
-                        igdbId: gameTopGame.data[i].igdb_id,
-                        summary: "",
-                        genres: [],
-                        platforms: [],
-                        involvedCompanies: [],
-                        firstReleaseDate: new Date(1972, 5, 18), //cette date par défaut car 1972 est l'année de la cation du permier jeuw-vidéo et je suis née le 18/05. Des bisous
-                    };
-                    //Requete pour Get Game API Igdb
-                    let urlIgdb = `https://api.igdb.com/v4/games/${currentGame.igdbId}?fields=name,summary,genres.name,platforms.name,cover.image_id,first_release_date,involved_companies.company.name`;
-                    const gameIgdb = yield sendTwitchRequest(urlIgdb, authorization, clientId);
-                    //Je récupère les données des games et les stocks dans le currentGame
-                    //Pour gérer lors qu'il n'y pas de firstReleaseDate
-                    if (gameIgdb[0].first_release_date != undefined) {
-                        currentGame.firstReleaseDate = convertUnixEpochToDate(gameIgdb[0].first_release_date);
-                    }
-                    //Toutes les données avec les tableaux : genres / platforms / incolvedCompanies
-                    if (gameIgdb[0].genres != undefined) {
-                        for (let i = 0; i < gameIgdb[0].genres.length; i++) {
-                            currentGame.genres.push(gameIgdb[0].genres[i].name);
+                    //J'exclue tous les TopGame qui ne sont pas des games comme JustChatting par exemple
+                    if (gameTopGame.data[i].igdb_id !== "") {
+                        let currentGame = {
+                            id: gameTopGame.data[i].id,
+                            name: gameTopGame.data[i].name,
+                            igdbId: gameTopGame.data[i].igdb_id,
+                            summary: "",
+                            genres: [],
+                            platforms: [],
+                            involvedCompanies: [],
+                            firstReleaseDate: new Date(1972, 5, 18),
+                            streams: [],
+                        };
+                        //Requete pour Get Game API Igdb
+                        let urlIgdb = `https://api.igdb.com/v4/games/${currentGame.igdbId}?fields=name,summary,genres.name,platforms.name,cover.image_id,first_release_date,involved_companies.company.name`;
+                        const gameIgdb = yield sendTwitchRequest(urlIgdb, authorization, clientId);
+                        //Je récupère les données des games et les stocks dans le currentGame
+                        //Pour gérer lors qu'il n'y pas de firstReleaseDate - je fais la meme pour les autres ensuite
+                        if (gameIgdb[0].first_release_date != undefined) {
+                            currentGame.firstReleaseDate = convertUnixEpochToDate(gameIgdb[0].first_release_date);
                         }
-                    }
-                    if (gameIgdb[0].platforms != undefined) {
-                        for (let i = 0; i < gameIgdb[0].platforms.length; i++) {
-                            currentGame.platforms.push(gameIgdb[0].platforms[i].name);
+                        //Toutes les données avec les tableaux : genres / platforms / incolvedCompanies
+                        if (gameIgdb[0].genres != undefined) {
+                            for (let i = 0; i < gameIgdb[0].genres.length; i++) {
+                                currentGame.genres.push(gameIgdb[0].genres[i].name);
+                            }
                         }
-                    }
-                    if (gameIgdb[0].involved_companies != undefined) {
-                        for (let i = 0; i < gameIgdb[0].involved_companies.length; i++) {
-                            currentGame.involvedCompanies.push(gameIgdb[0].involved_companies[i].name);
+                        if (gameIgdb[0].platforms != undefined) {
+                            for (let i = 0; i < gameIgdb[0].platforms.length; i++) {
+                                currentGame.platforms.push(gameIgdb[0].platforms[i].name);
+                            }
                         }
+                        if (gameIgdb[0].involved_companies != undefined) {
+                            for (let i = 0; i < gameIgdb[0].involved_companies.length; i++) {
+                                currentGame.involvedCompanies.push(gameIgdb[0].involved_companies[i].name);
+                            }
+                        }
+                        currentGame.summary = gameIgdb[0].summary;
+                        //Requete pour Get Stream API Twitch
+                        let urlStreams = `https://api.twitch.tv/helix/streams?game_id=${currentGame.id}`;
+                        const gameStream = yield sendTwitchRequest(urlStreams, authorization, clientId);
+                        for (let i = 0; i < gameStream.data.length; i++) {
+                            const currentStream = new Stream(gameStream.data[i].user_name, gameStream.data[i].title, gameStream.data[i].language, gameStream.data[i].viewer_count);
+                            currentGame.streams.push(currentStream);
+                        }
+                        yield updateGame(currentGame);
                     }
-                    currentGame.summary = gameIgdb[0].summary;
-                    yield updateGame(currentGame);
                 }
                 //MAJ de l'ur de la page suivante
-                url = gameTopGame.pagination.cursor !== null ? `${url}?first=100&after=${gameTopGame.pagination.cursor}` : "";
+                url =
+                    gameTopGame.pagination.cursor !== null
+                        ? `${url}?first=100&after=${gameTopGame.pagination.cursor}`
+                        : "";
             }
         }
         catch (error) {
@@ -127,18 +158,35 @@ function createGames(url, authorization, clientId) {
 //Méthode pour update ma database avec mon currentGame
 function updateGame(gameData) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { id, name, igdbId, summary, firstReleaseDate, genres, platforms, incolvedCompanies } = gameData;
+        const { id, name, igdbId, summary, firstReleaseDate, genres, platforms, involvedCompanies, streams, } = gameData;
         try {
             //Recherche du game existant avec l'ID actuel
             const existingGame = yield GameModel.findById(id);
             if (existingGame) {
-                existingGame.name = name;
-                existingGame.igdbId = igdbId;
-                existingGame.firstReleaseDate = firstReleaseDate;
-                existingGame.genres = genres;
-                existingGame.platforms = platforms;
-                existingGame.involvedCompanies = incolvedCompanies;
-                existingGame.summary = summary;
+                //Je vérifie si la donnée à changer et la modif que si elle a changé
+                //En vrai c'est nulle ! Va falloir trouver autre chose de mieux
+                if (existingGame.name !== name) {
+                    existingGame.name = name;
+                }
+                if (existingGame.igdbId !== igdbId) {
+                    existingGame.igdbId = igdbId;
+                }
+                if (existingGame.firstReleaseDate !== firstReleaseDate) {
+                    existingGame.firstReleaseDate = firstReleaseDate;
+                }
+                if (existingGame.genres !== genres) {
+                    existingGame.genres = genres;
+                }
+                if (existingGame.platforms !== platforms) {
+                    existingGame.platforms = platforms;
+                }
+                if (existingGame.involvedCompanies !== involvedCompanies) {
+                    existingGame.involvedCompanies = involvedCompanies;
+                }
+                if (existingGame.summary !== summary) {
+                    existingGame.summary = summary;
+                }
+                existingGame.streams = streams;
                 yield existingGame.save();
             }
             else {
@@ -150,8 +198,9 @@ function updateGame(gameData) {
                     firstReleaseDate,
                     genres,
                     platforms,
-                    incolvedCompanies,
+                    involvedCompanies,
                     summary,
+                    streams,
                 });
                 yield newGame.save();
             }

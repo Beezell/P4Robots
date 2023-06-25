@@ -15,11 +15,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 /*
 ------------PLAN D'ACTION POUR CE ROBOT DE MAITRE AMAURY------------
 - Créer un objet dans lequel ranger mes données ✅
-- Récupérer les donées de l'ISS et les ranger dans mon objet ✅
+- Récupérer les donées et les ranger dans mon objet ✅
 - Stocker mon objet en base de donnée Mongo ✅
 - Edit de la DB et pas ajout systémqtique ✅
-- Jeux complet avec IGDB! ❌
-- le robot se lance tous les jours à 21h
+- Jeux complet ! ❌ MANQUE COVER IGDB
+- le robot se lance tous les jours à 21h ❌
 --------------------------------------------------------------------
 */
 const mongoose_1 = __importDefault(require("mongoose"));
@@ -66,7 +66,7 @@ const gameSchema = new mongoose_1.default.Schema({
     streams: [streamsSchema],
     viewerHistory: [ViewerHistorySchema] // à faire
 });
-//Je crée mon Model
+//Je crée mon Model mon mon Game
 const GameModel = mongoose_1.default.model("Game", gameSchema);
 //Méthode qui cherche mes Games et qui les enregistre sur MongoDB
 function fetchGame() {
@@ -281,6 +281,6 @@ function calculateExecutionTime(startTime, endTime) {
     const minutes = Math.floor(executionTime / 60000);
     const seconds = Math.floor((executionTime % 60000) / 1000);
     const milliseconds = executionTime % 1000;
-    console.log(`Temps d'exécution : ${minutes} minutes, ${seconds} secondes et ${milliseconds} millisecondes`);
+    console.log(`Temps d'exécution du magnifique Robossein: ${minutes} minutes, ${seconds} secondes et ${milliseconds} millisecondes`);
 }
 display();

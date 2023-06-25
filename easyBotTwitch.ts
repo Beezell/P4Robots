@@ -277,12 +277,26 @@ function convertUnixEpochToDate(unixEpoch: any) {
 }
 
 async function display() {
+  const startTime = Date.now();
   //J'ouvre le flux vers mongoDB et je remplis la db
   mongoose.connect("mongodb://127.0.0.1:27017/pixelhunt_db");
   console.log("Connexion à MongoDB avec le sourire !");
   await fetchGame();
   mongoose.disconnect();
   console.log("On ferme MongoDB à clef svp");
+
+  const endTime = Date.now();
+  calculateExecutionTime(startTime, endTime);
+}
+
+//Pour moi : pour savoir combien de temps ça met
+function calculateExecutionTime(startTime: any, endTime: any) {
+  const executionTime = endTime - startTime;
+  const minutes = Math.floor(executionTime / 60000);
+  const seconds = Math.floor((executionTime % 60000) / 1000);
+  const milliseconds = executionTime % 1000;
+
+  console.log(`Temps d'exécution : ${minutes} minutes, ${seconds} secondes et ${milliseconds} millisecondes`);
 }
 
 display();

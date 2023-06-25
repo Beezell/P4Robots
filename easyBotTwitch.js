@@ -58,6 +58,7 @@ const gameSchema = new mongoose_1.default.Schema({
     name: String,
     igdbId: String,
     //INFO get Games Igdb
+    cover: String,
     firstReleaseDate: Date,
     genres: [],
     summary: String,
@@ -138,6 +139,7 @@ function createCurrentGame(gameData) {
             name: gameData.name,
             igdbId: gameData.igdb_id,
             summary: "",
+            cover: "",
             genres: [],
             platforms: [],
             involvedCompanies: [],
@@ -157,6 +159,9 @@ function updateCurrentGameWithIgdbData(currentGame) {
         //Pour gérer lors qu'il n'y pas de firstReleaseDate - je fais la meme pour les autres ensuite
         if (gameIgdb[0].first_release_date != undefined) {
             currentGame.firstReleaseDate = convertUnixEpochToDate(gameIgdb[0].first_release_date);
+        }
+        if (gameIgdb[0].cover.image_id != undefined) {
+            currentGame.cover = "https://images.igdb.com/igdb/image/upload/t_cover_big/" + gameIgdb[0].cover.image_id + ".png";
         }
         //Toutes les données avec les tableaux : genres / platforms / incolvedCompanies
         if (gameIgdb[0].genres != undefined) {
@@ -201,7 +206,7 @@ function getNextPageUrl(gameTopGame, url) {
 //Méthode pour update ma database avec mon currentGame
 function updateGame(gameData) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { id, name, igdbId, summary, firstReleaseDate, genres, platforms, involvedCompanies, streams, viewerByDate } = gameData;
+        const { id, name, igdbId, cover, summary, firstReleaseDate, genres, platforms, involvedCompanies, streams, viewerByDate } = gameData;
         try {
             //Recherche du game existant avec l'ID actuel
             const existingGame = yield GameModel.findById(id);
@@ -213,6 +218,9 @@ function updateGame(gameData) {
                 }
                 if (existingGame.igdbId !== igdbId) {
                     existingGame.igdbId = igdbId;
+                }
+                if (existingGame.cover !== cover) {
+                    existingGame.cover = cover;
                 }
                 if (existingGame.firstReleaseDate !== firstReleaseDate) {
                     existingGame.firstReleaseDate = firstReleaseDate;
@@ -239,6 +247,7 @@ function updateGame(gameData) {
                     _id: id,
                     name,
                     igdbId,
+                    cover,
                     firstReleaseDate,
                     genres,
                     platforms,

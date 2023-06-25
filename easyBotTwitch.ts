@@ -49,6 +49,7 @@ const gameSchema = new mongoose.Schema({
   name: String,
   igdbId: String,
   //INFO get Games Igdb
+  cover: String,
   firstReleaseDate: Date,
   genres: [],
   summary: String,
@@ -129,6 +130,7 @@ async function createCurrentGame(gameData: any) {
     name: gameData.name,
     igdbId: gameData.igdb_id,
     summary: "",
+    cover:"",
     genres: [] as string[],
     platforms: [] as string[],
     involvedCompanies: [] as string[],
@@ -148,6 +150,9 @@ async function updateCurrentGameWithIgdbData(currentGame: any) {
   //Pour gérer lors qu'il n'y pas de firstReleaseDate - je fais la meme pour les autres ensuite
   if (gameIgdb[0].first_release_date != undefined) {
     currentGame.firstReleaseDate = convertUnixEpochToDate(gameIgdb[0].first_release_date);
+  }
+  if (gameIgdb[0].cover.image_id != undefined) {
+    currentGame.cover = "https://images.igdb.com/igdb/image/upload/t_cover_big/" + gameIgdb[0].cover.image_id + ".png";
   }
 
   //Toutes les données avec les tableaux : genres / platforms / incolvedCompanies
@@ -204,6 +209,7 @@ async function updateGame(gameData: any) {
     id,
     name,
     igdbId,
+    cover,
     summary,
     firstReleaseDate,
     genres,
@@ -225,6 +231,9 @@ async function updateGame(gameData: any) {
       }
       if (existingGame.igdbId !== igdbId) {
         existingGame.igdbId = igdbId;
+      }
+      if (existingGame.cover !== cover) {
+        existingGame.cover = cover;
       }
       if (existingGame.firstReleaseDate !== firstReleaseDate) {
         existingGame.firstReleaseDate = firstReleaseDate;
@@ -251,6 +260,7 @@ async function updateGame(gameData: any) {
         _id: id,
         name,
         igdbId,
+        cover,
         firstReleaseDate,
         genres,
         platforms,

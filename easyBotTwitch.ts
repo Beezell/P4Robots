@@ -28,6 +28,20 @@ const streamsSchema = new mongoose.Schema({
     viewerCount: Number
   });
 
+//Objet pour l'historique des viewers 
+class ViewerByDate {
+    constructor(
+      public date: Date,
+      public viewers: Number,
+    ) {}
+  }
+
+//Je crée un schéma pour mon historique de viewer
+const ViewerHistorySchema = new mongoose.Schema({
+  date: Date,
+  viewers: Number,
+})
+
 //Je crée un schéma pour mon game
 const gameSchema = new mongoose.Schema({
   //INFO get TopGames Twitch
@@ -41,31 +55,32 @@ const gameSchema = new mongoose.Schema({
   platforms: [],
   involvedCompanies: [],
   streams: [streamsSchema],
+  viewerHistory: [ViewerHistorySchema] // à faire
 });
-
-
 
 //Je crée mon Model
 const GameModel = mongoose.model("Game", gameSchema);
 
 //Méthode qui cherche mes Games et qui les enregistre sur MongoDB
 async function fetchGame() {
-  //Token pour l'API Twhitch et IGDB
-  const authorization = "Bearer 7tb61t29r3fhaft6ux6hh64fr1sf6v";
-  const clientId = "7xereixlp03cyd9lsebf4om6rensrb";
 
   //Requête Get TopGames API Twitch
   const urlGetTopGames = "https://api.twitch.tv/helix/games/top";
   try {
     let url = urlGetTopGames;
-    await createGames(url, authorization, clientId);
+    await buildingGames(url);
   } catch (error) {
     console.log("ton fetch il est moyen : " + error);
   }
 }
 
-//Pour les autorisation d'identification pour Twitch
-async function sendTwitchRequest(url: any, authorization: any, clientId: any) {
+//Méthode pour les autorisation d'identification pour Twitch
+async function sendTwitchRequest(url: any) {
+
+  //Token pour l'API Twhitch et IGDB
+  const authorization = "Bearer 7tb61t29r3fhaft6ux6hh64fr1sf6v";
+  const clientId = "7xereixlp03cyd9lsebf4om6rensrb";
+
   const headers = new Headers();
   headers.append("Authorization", authorization);
   headers.append("Client-Id", clientId);
@@ -78,92 +93,109 @@ async function sendTwitchRequest(url: any, authorization: any, clientId: any) {
   return response.json();
 }
 
-//Première requête pour ma collection Games
-async function createGames(url: any, authorization: any, clientId: any) {
+//Méthode pour passer dans chacune des pages et à chaque fois créer un game pour chacun des objets
+async function buildingGames(url: any){
   try {
-    //BOUCLE : pour parcourir les pages de résultats TANT QUE url!=null
+    //boucle : pour parcourir les pages de résultats TANT QUE url!=null
     while (url) {
-      const gameTopGame = await sendTwitchRequest(url, authorization, clientId);
-
-      //Je récupère les données de mes jeux et je stock dans mon currentGame
-      for (let i = 0; i < gameTopGame.data.length; i++) {
-        //J'exclue tous les TopGame qui ne sont pas des games comme JustChatting par exemple
-        if (gameTopGame.data[i].igdb_id !== "") {
-          let currentGame = {
-            id: gameTopGame.data[i].id,
-            name: gameTopGame.data[i].name,
-            igdbId: gameTopGame.data[i].igdb_id,
-            summary: "",
-            genres: [] as string[],
-            platforms: [] as string[],
-            involvedCompanies: [] as string[],
-            firstReleaseDate: new Date(1972, 5, 18), //cette date par défaut car 1972 est l'année de la cation du permier jeuw-vidéo et je suis née le 18/05. Des bisous
-            streams: [] as Stream[],
-          };
-
-          //Requete pour Get Game API Igdb
-          let urlIgdb = `https://api.igdb.com/v4/games/${currentGame.igdbId}?fields=name,summary,genres.name,platforms.name,cover.image_id,first_release_date,involved_companies.company.name`;
-          const gameIgdb = await sendTwitchRequest(
-            urlIgdb,
-            authorization,
-            clientId
-          );
-
-          //Je récupère les données des games et les stocks dans le currentGame
-          //Pour gérer lors qu'il n'y pas de firstReleaseDate - je fais la meme pour les autres ensuite
-          if (gameIgdb[0].first_release_date != undefined) {
-            currentGame.firstReleaseDate = convertUnixEpochToDate(
-              gameIgdb[0].first_release_date
-            );
-          }
-
-          //Toutes les données avec les tableaux : genres / platforms / incolvedCompanies
-          if (gameIgdb[0].genres != undefined) {
-            for (let i = 0; i < gameIgdb[0].genres.length; i++) {
-              currentGame.genres.push(gameIgdb[0].genres[i].name);
-            }
-          }
-          if (gameIgdb[0].platforms != undefined) {
-            for (let i = 0; i < gameIgdb[0].platforms.length; i++) {
-              currentGame.platforms.push(gameIgdb[0].platforms[i].name);
-            }
-          }
-          if (gameIgdb[0].involved_companies != undefined) {
-            for (let i = 0; i < gameIgdb[0].involved_companies.length; i++) {
-              currentGame.involvedCompanies.push(
-                gameIgdb[0].involved_companies[i].name
-              );
-            }
-          }
-          currentGame.summary = gameIgdb[0].summary;
-
-          //Requete pour Get Stream API Twitch
-          let urlStreams = `https://api.twitch.tv/helix/streams?game_id=${currentGame.id}`;
-          const gameStream = await sendTwitchRequest(
-            urlStreams,
-            authorization,
-            clientId
-          );
-
-          for (let i = 0; i < gameStream.data.length; i++) {
-            const currentStream = new Stream(gameStream.data[i].user_name,gameStream.data[i].title, gameStream.data[i].language, gameStream.data[i].viewer_count)
-            
-            currentGame.streams.push(currentStream);
-            
-          }
-
-          await updateGame(currentGame);
-        }
-      }
-      //MAJ de l'ur de la page suivante
-      url =
-        gameTopGame.pagination.cursor !== null
-          ? `${url}?first=100&after=${gameTopGame.pagination.cursor}`
-          : "";
+      const gameTopGame = await sendTwitchRequest(url);
+      await processGameTopGame(gameTopGame,);
+      url = getNextPageUrl(gameTopGame, url);
     }
   } catch (error) {
     console.log("Ton Game Top il est pas ouf mais ça tu le sais : " + error);
   }
+
+}
+
+//Méthode pour créer mon game en passant par chacune des requête
+//La première des requête est GET TopGames
+async function processGameTopGame(gameTopGame: any){
+  for (let i = 0; i < gameTopGame.data.length; i++) {
+    //J'exclue tous les TopGame qui ne sont pas des games comme JustChatting par exemple
+    if (gameTopGame.data[i].igdb_id !== "") {
+      const currentGame = await createCurrentGame(gameTopGame.data[i]);
+      await updateCurrentGameWithIgdbData(currentGame);
+      await updateCurrentGameWithStreams(currentGame);
+      await updateGame(currentGame);
+    }
+  }
+}
+
+//Je crée mon currentGame avec d'abord les gameData qui vienne de ma requête Get TopGame
+async function createCurrentGame(gameData: any) {
+  const currentGame = {
+    id: gameData.id,
+    name: gameData.name,
+    igdbId: gameData.igdb_id,
+    summary: "",
+    genres: [] as string[],
+    platforms: [] as string[],
+    involvedCompanies: [] as string[],
+    firstReleaseDate: new Date(1972, 5, 18),
+    streams: [] as Stream[],
+    viewerByDate: ViewerByDate,
+  };
+  return currentGame;
+}
+
+//Méthode pour la requete Get Game API Igdb
+async function updateCurrentGameWithIgdbData(currentGame: any) {
+  const urlIgdb = `https://api.igdb.com/v4/games/${currentGame.igdbId}?fields=name,summary,genres.name,platforms.name,cover.image_id,first_release_date,involved_companies.company.name`;
+  const gameIgdb = await sendTwitchRequest(urlIgdb);
+
+  //Je récupère les données des games et les stocks dans le currentGame
+  //Pour gérer lors qu'il n'y pas de firstReleaseDate - je fais la meme pour les autres ensuite
+  if (gameIgdb[0].first_release_date != undefined) {
+    currentGame.firstReleaseDate = convertUnixEpochToDate(gameIgdb[0].first_release_date);
+  }
+
+  //Toutes les données avec les tableaux : genres / platforms / incolvedCompanies
+  if (gameIgdb[0].genres != undefined) {
+    for (let i = 0; i < gameIgdb[0].genres.length; i++) {
+      currentGame.genres.push(gameIgdb[0].genres[i].name);
+    }
+  }
+  if (gameIgdb[0].platforms != undefined) {
+    for (let i = 0; i < gameIgdb[0].platforms.length; i++) {
+      currentGame.platforms.push(gameIgdb[0].platforms[i].name);
+    }
+  }
+  if (gameIgdb[0].involved_companies != undefined) {
+    for (let i = 0; i < gameIgdb[0].involved_companies.length; i++) {
+      currentGame.involvedCompanies.push(gameIgdb[0].involved_companies[i].name);
+    }
+  }
+  currentGame.summary = gameIgdb[0].summary;
+}
+
+//Méthode pour la requete Get Stream API Twitch
+async function updateCurrentGameWithStreams(currentGame: any) {
+  const urlStreams = `https://api.twitch.tv/helix/streams?game_id=${currentGame.id}`;
+  const gameStream = await sendTwitchRequest(urlStreams);
+  //Toutes les données pour les Streams
+  let totalViewer=0;
+  for (let i = 0; i < gameStream.data.length; i++) {
+    const currentStream = new Stream(
+      gameStream.data[i].user_name,
+      gameStream.data[i].title,
+      gameStream.data[i].language,
+      gameStream.data[i].viewer_count
+    );
+    totalViewer += gameStream.data[i].viewer_count;
+    currentGame.streams.push(currentStream);
+  }
+
+  currentGame.viewerByDate = new ViewerByDate(new Date, totalViewer)
+
+}
+
+//Méthode pour mettre à jour l'url de la page pour la boucle
+function getNextPageUrl(gameTopGame: any, url:any){
+  
+  return gameTopGame.pagination.cursor !== null
+  ? `${url}?first=100&after=${gameTopGame.pagination.cursor}`
+  : "";
 }
 
 //Méthode pour update ma database avec mon currentGame
@@ -178,6 +210,7 @@ async function updateGame(gameData: any) {
     platforms,
     involvedCompanies,
     streams,
+    viewerByDate
   } = gameData;
 
   try {
@@ -209,12 +242,12 @@ async function updateGame(gameData: any) {
         existingGame.summary = summary;
       }
       existingGame.streams = streams;
-      
+      existingGame.viewerHistory.push(viewerByDate);
 
       await existingGame.save();
     } else {
       //Le game n'existe pas donc création d'un nouveau
-      const newGame = new GameModel({
+      let newGame = new GameModel({
         _id: id,
         name,
         igdbId,
@@ -224,7 +257,10 @@ async function updateGame(gameData: any) {
         involvedCompanies,
         summary,
         streams,
+        viewerHistory:[]
       });
+
+      newGame.viewerHistory.push(viewerByDate)
       await newGame.save();
     }
   } catch (error) {

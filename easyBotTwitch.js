@@ -160,7 +160,7 @@ function updateCurrentGameWithIgdbData(currentGame) {
         if (gameIgdb[0].first_release_date != undefined) {
             currentGame.firstReleaseDate = convertUnixEpochToDate(gameIgdb[0].first_release_date);
         }
-        if (gameIgdb[0].cover.image_id != undefined) {
+        if (gameIgdb[0].cover != undefined) {
             currentGame.cover = "https://images.igdb.com/igdb/image/upload/t_cover_big/" + gameIgdb[0].cover.image_id + ".png";
         }
         //Toutes les données avec les tableaux : genres / platforms / incolvedCompanies

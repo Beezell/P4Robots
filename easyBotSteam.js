@@ -32,7 +32,8 @@ const GameSchema = new mongoose_1.default.Schema({
 const GameModel = mongoose_1.default.model('Game', GameSchema);
 //Je crée un schéma pour les gameSteam de la collection SteamGame de MongoDb
 const GameSteamSchema = new mongoose_1.default.Schema({
-    _id: String
+    _id: String,
+    name: String
 });
 //Je crée le model pour les gameSteam de la collection SteamGame de MongoDb
 const GameSteamModel = mongoose_1.default.model('SteamGame', GameSteamSchema);
@@ -54,8 +55,10 @@ function fetchGameSteam() {
                             _id: games[i]._id,
                             name: SteamGamesAll.applist.apps[i].name
                         };
-                        console.log(currentGameSteam);
-                        //await buildingGamesSteam(gameRecover, SteamGamesAll);
+                        //console.log(currentGameSteam);
+                        let newGame = new GameSteamModel(currentGameSteam);
+                        yield newGame.save();
+                        //await updateGameSteam(currentGameSteam)
                     }
                 }
             }
@@ -76,16 +79,32 @@ function getAllGameWithSteam() {
         return response.json();
     });
 }
-function buildingGamesSteam(gameRecover, SteamGamesAll) {
+function updateGameSteam(gameData) {
     return __awaiter(this, void 0, void 0, function* () {
-        //Test ok !!! 
-        /*
-        let newGame = new GameSteamModel({
-            _id: "test",
-           
-          });
-          await newGame.save();
-          */
+        const { id, name, } = gameData;
+        try {
+            //Recherche du game existant avec l'ID actuel
+            const existingGame = yield GameSteamModel.findById(id);
+            if (existingGame) {
+                //Je vérifie si la donnée à changer et la modif que si elle a changé
+                //En vrai c'est nulle ! Va falloir trouver autre chose de mieux
+                if (existingGame.name !== name) {
+                    existingGame.name = name;
+                }
+                yield existingGame.save();
+            }
+            else {
+                //Le game n'existe pas donc création d'un nouveau
+                let newGame = new GameSteamModel({
+                    _id: id,
+                    name,
+                });
+                yield newGame.save();
+            }
+        }
+        catch (error) {
+            console.error("Erreur lors de l'enregistrement du gameSteam :", error);
+        }
     });
 }
 function display() {

@@ -130,11 +130,11 @@ async function createCurrentGame(gameData: any) {
     name: gameData.name,
     igdbId: gameData.igdb_id,
     summary: "",
-    cover:"",
+    cover: "",
     genres: [] as string[],
     platforms: [] as string[],
     involvedCompanies: [] as string[],
-    firstReleaseDate: new Date(1972, 5, 18),
+    firstReleaseDate: new Date(1972, 5, 18),//1972 : premier jv et 18/05 mon anniversaire. Des bisous !
     streams: [] as Stream[],
     viewerByDate: ViewerByDate,
   };
@@ -151,10 +151,9 @@ async function updateCurrentGameWithIgdbData(currentGame: any) {
   if (gameIgdb[0].first_release_date != undefined) {
     currentGame.firstReleaseDate = convertUnixEpochToDate(gameIgdb[0].first_release_date);
   }
-  if (gameIgdb[0].cover.image_id != undefined) {
+  if (gameIgdb[0].cover != undefined) {
     currentGame.cover = "https://images.igdb.com/igdb/image/upload/t_cover_big/" + gameIgdb[0].cover.image_id + ".png";
   }
-
   //Toutes les données avec les tableaux : genres / platforms / incolvedCompanies
   if (gameIgdb[0].genres != undefined) {
     for (let i = 0; i < gameIgdb[0].genres.length; i++) {

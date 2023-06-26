@@ -32,8 +32,14 @@ const GameSchema = new mongoose_1.default.Schema({
 const GameModel = mongoose_1.default.model('Game', GameSchema);
 //Je crée un schéma pour les gameSteam de la collection SteamGame de MongoDb
 const GameSteamSchema = new mongoose_1.default.Schema({
-    _id: String,
-    name: String
+    idGame: String,
+    name: String,
+    appid: String,
+    type: String,
+    requiredAge: Number,
+    isFree: Boolean,
+    supportedLanguage: String,
+    headerImage: String
 });
 //Je crée le model pour les gameSteam de la collection SteamGame de MongoDb
 const GameSteamModel = mongoose_1.default.model('SteamGame', GameSteamSchema);
@@ -46,18 +52,25 @@ function fetchGameSteam() {
             const games = yield GameModel.find().exec();
             //Je parcours ma collection Game pour récupérer le Game
             for (let i = 0; i < games.length; i++) {
-                //const gameRecover = games[i];
+                const gameRecover = games[i];
                 //Je parcours la liste récupérer avec GetAllGames de Steam
                 for (let i = 0; i < SteamGamesAll.applist.apps.length; i++) {
                     //Je tcheck de savoir si le nom match
-                    if (games[i].name = SteamGamesAll.applist.apps[i].name) {
-                        const currentGameSteam = {
-                            _id: games[i]._id,
-                            name: SteamGamesAll.applist.apps[i].name
+                    if (gameRecover.name == SteamGamesAll.applist.apps[i].name) {
+                        let currentGameSteam = {
+                            idGame: gameRecover._id,
+                            name: SteamGamesAll.applist.apps[i].name,
+                            appid: SteamGamesAll.applist.apps[i].appid,
+                            type: "",
+                            requiredAge: 0,
+                            isFree: false,
+                            supportedLanguage: "unknown",
+                            headerImage: ""
                         };
-                        //console.log(currentGameSteam);
-                        let newGame = new GameSteamModel(currentGameSteam);
-                        yield newGame.save();
+                        currentGameSteam = yield updateCurrentGameSteamWithSteam(currentGameSteam);
+                        console.log(currentGameSteam);
+                        let newGameSteam = new GameSteamModel(currentGameSteam);
+                        //await newGameSteam.save();
                         //await updateGameSteam(currentGameSteam)
                     }
                 }
@@ -66,6 +79,40 @@ function fetchGameSteam() {
         catch (error) {
             console.log("Le dernier nous fait sortir avec un name undifined donc DON'T PANIC ! " + error);
         }
+    });
+}
+function updateCurrentGameSteamWithSteam(currentGamesSteam) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const oneGameSteam = yield getOneGameSteam(currentGamesSteam);
+        for (const appIdKey in oneGameSteam) {
+            if (oneGameSteam.hasOwnProperty(appIdKey)) {
+                const oneGame = oneGameSteam[appIdKey];
+                console.log(oneGame.success);
+                if (oneGame.success == true) {
+                    currentGamesSteam.type = oneGame.data.type;
+                    currentGamesSteam.requiredAge = oneGame.data.required_age;
+                    currentGamesSteam.isFree = oneGame.data.is_free;
+                    if (oneGame.data.supported_language != undefined) {
+                        currentGamesSteam.supportedLanguage = oneGame.data.supported_language;
+                    }
+                    currentGamesSteam.headerImage = oneGame.data.header_image;
+                }
+                break;
+            }
+        }
+        //currentGamesSteam.type = oneGameSteam.type
+        return currentGamesSteam;
+    });
+}
+function getOneGameSteam(currentGamesSteam) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const url = `https://store.steampowered.com/api/appdetails/?appids=${currentGamesSteam.appid}`;
+        //Utilise la requête et les autorisation
+        const response = yield fetch(url);
+        if (!response.ok) {
+            throw new Error("Response not OK ! Bolosse");
+        }
+        return response.json();
     });
 }
 function getAllGameWithSteam() {

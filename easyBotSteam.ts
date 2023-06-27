@@ -163,15 +163,23 @@ async function updateCurrentGameSteamWithSteam(currentGamesSteam:any){
 }
 
 async function getOneGameSteam(currentGamesSteam:any){
-  const url = `https://store.steampowered.com/api/appdetails/?appids=${currentGamesSteam.appid}`;
-  // pour l'avoir en fr : à la fin de la requête rajouter '&l=french'
-    
-  //Utilise la requête et les autorisation
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error("Response not OK ! Bolosse");
+  try{
+    const url = `https://store.steampowered.com/api/appdetails/?appids=${currentGamesSteam.appid}`;
+    // pour l'avoir en fr : à la fin de la requête rajouter '&l=french'
+      
+    //Utilise la requête et les autorisation
+    const response = await fetch(url);
+
+    return response.json();
+  }catch(error){
+    console.log("error dans getOneSteam" + error);
+    console.log("appid qui merde : " + currentGamesSteam.appid);
   }
-  return response.json();
+  
+  // if (!response.ok) {
+  //   throw new Error("Response not OK ! Teuteu : " + currentGamesSteam.appid);
+  // }
+  // return response.json();
 
 }
 

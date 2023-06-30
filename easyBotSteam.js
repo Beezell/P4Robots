@@ -14,11 +14,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 /*
 ------------PLAN D'ACTION POUR CE ROBOT DE MAITRE AMAURY------------
-- Créer un objet dans lequel ranger mes données ❌
+- Créer un objet dans lequel ranger mes données ✅
 - Récupérer le nom et id du game dans MongoDB ✅
-- Récupérer les donées sur Steam et créé une nouvelle collection SteamGame avec le mm id que pour la collection Game ❌
-- Stocker mon objet en base de donnée Mongo : SteamGame❌
-- Edit de la DB et pas ajout systémqtique ❌
+- Récupérer les donées sur Steam et créé une nouvelle collection SteamGame avec le mm id que pour la collection Game ✅
+- Stocker mon objet en base de donnée Mongo : SteamGame ✅
+- Edit de la DB et pas ajout systémqtique ✅
 - le robot se lance chaque lundi matin à 8h ❌
 --------------------------------------------------------------------
 */
@@ -26,10 +26,10 @@ const mongoose_1 = __importDefault(require("mongoose"));
 //Je crée un schéma pour récupérer mes games dans la collection game de MongoDB
 const GameSchema = new mongoose_1.default.Schema({
     _id: String,
-    name: String
+    name: String,
 });
 //Je crée le model pour les games de la collection game de MongoDB
-const GameModel = mongoose_1.default.model('Game', GameSchema);
+const GameModel = mongoose_1.default.model("Game", GameSchema);
 //Je crée un schéma pour les gameSteam de la collection SteamGame de MongoDb
 const GameSteamSchema = new mongoose_1.default.Schema({
     idGame: String,
@@ -48,7 +48,7 @@ const GameSteamSchema = new mongoose_1.default.Schema({
     price: String,
 });
 //Je crée le model pour les gameSteam de la collection SteamGame de MongoDb
-const GameSteamModel = mongoose_1.default.model('SteamGame', GameSteamSchema);
+const GameSteamModel = mongoose_1.default.model("SteamGame", GameSteamSchema);
 //Méthode qui cherche les games de mongo et qui va requête l'api Steam pour ma collection SteamGame
 function fetchGameSteam() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -77,16 +77,15 @@ function fetchGameSteam() {
                             publishers: [],
                             categories: [],
                             genres: [],
-                            price: ""
+                            price: "",
                         };
                         yield updateCurrentGameSteamWithSteam(currentGameSteam);
-                        //await updateGameSteam(currentGameSteam)
                     }
                 }
             }
         }
         catch (error) {
-            console.log("Le dernier nous fait sortir avec un name undifined donc DON'T PANIC ! " + error);
+            console.log(" catch dans le fetch : " + error);
         }
     });
 }
@@ -97,53 +96,72 @@ function updateCurrentGameSteamWithSteam(currentGamesSteam) {
             if (oneGameSteam.hasOwnProperty(appIdKey)) {
                 const oneGame = oneGameSteam[appIdKey];
                 if (oneGame.success === true) {
-                    if (oneGame.data.type != undefined) {
-                        currentGamesSteam.type = oneGame.data.type;
+                    const { type, required_age, is_free, supported_languages, header_image, about_the_game, price_overview, developers, publishers, genres, categories, } = oneGame.data;
+                    if (type !== undefined) {
+                        currentGamesSteam.type = type;
                     }
-                    if (oneGame.data.required_age != undefined) {
-                        currentGamesSteam.requiredAge = oneGame.data.required_age;
+                    if (required_age !== undefined) {
+                        currentGamesSteam.requiredAge = required_age;
                     }
-                    if (oneGame.data.is_free != undefined) {
-                        currentGamesSteam.isFree = oneGame.data.is_free;
+                    if (is_free !== undefined) {
+                        currentGamesSteam.isFree = is_free;
                     }
-                    if (oneGame.data.supported_languages != undefined) {
-                        currentGamesSteam.supportedLanguage = oneGame.data.supported_languages;
+                    if (supported_languages !== undefined) {
+                        currentGamesSteam.supportedLanguage = supported_languages;
                     }
-                    if (oneGame.data.header_image != undefined) {
-                        currentGamesSteam.headerImage = oneGame.data.header_image;
+                    if (header_image !== undefined) {
+                        currentGamesSteam.headerImage = header_image;
                     }
-                    if (oneGame.data.about_the_game != undefined) {
-                        currentGamesSteam.aboutTheGame = oneGame.data.about_the_game;
+                    if (about_the_game !== undefined) {
+                        currentGamesSteam.aboutTheGame = about_the_game;
                     }
-                    if (oneGame.data.price_overview != undefined) {
-                        currentGamesSteam.price = oneGame.data.price_overview.final_formatted;
+                    if (price_overview !== undefined) {
+                        currentGamesSteam.price = price_overview.final_formatted;
                     }
-                    if (oneGame.data.developers != undefined) {
-                        for (let i = 0; i < oneGame.data.developers.length; i++) {
-                            currentGamesSteam.developers.push(oneGame.data.developers[i]);
+                    if (developers !== undefined) {
+                        currentGamesSteam.developers = developers;
+                    }
+                    if (publishers !== undefined) {
+                        currentGamesSteam.publishers = publishers;
+                    }
+                    if (genres !== undefined) {
+                        currentGamesSteam.genres = genres.map((genre) => genre.description);
+                    }
+                    if (categories !== undefined) {
+                        currentGamesSteam.categories = categories.map((category) => category.description);
+                    }
+                    let existingGameSteam = yield GameSteamModel.findOne({
+                        name: currentGamesSteam.name,
+                    });
+                    if (existingGameSteam) {
+                        existingGameSteam.type = currentGamesSteam.type;
+                        existingGameSteam.requiredAge = currentGamesSteam.requiredAge;
+                        existingGameSteam.isFree = currentGamesSteam.isFree;
+                        existingGameSteam.supportedLanguage = currentGamesSteam.supportedLanguage;
+                        existingGameSteam.headerImage = currentGamesSteam.headerImage;
+                        existingGameSteam.aboutTheGame = currentGamesSteam.aboutTheGame;
+                        existingGameSteam.price = currentGamesSteam.price;
+                        existingGameSteam.developers = currentGamesSteam.developers;
+                        existingGameSteam.publishers = currentGamesSteam.publishers;
+                        existingGameSteam.genres = currentGamesSteam.genres;
+                        existingGameSteam.categories = currentGamesSteam.categories;
+                        try {
+                            yield existingGameSteam.save();
+                        }
+                        catch (error) {
+                            console.log("Une erreur s'est produite lors de la sauvegarde du jeu Steam DEJA EXISTANT et c'est clacké au sol : " +
+                                error);
                         }
                     }
-                    if (oneGame.data.publishers != undefined) {
-                        for (let i = 0; i < oneGame.data.publishers.length; i++) {
-                            currentGamesSteam.publishers.push(oneGame.data.publishers[i]);
+                    else {
+                        let newGameSteam = new GameSteamModel(currentGamesSteam);
+                        try {
+                            yield newGameSteam.save();
                         }
-                    }
-                    if (oneGame.data.genres != undefined) {
-                        for (let i = 0; i < oneGame.data.genres.length; i++) {
-                            currentGamesSteam.genres.push(oneGame.data.genres[i].description);
+                        catch (error) {
+                            console.log("Une erreur s'est produite lors de la sauvegarde du NUVEAU jeu Steam et c'est clacké au sol : " +
+                                error);
                         }
-                    }
-                    if (oneGame.data.categories != undefined) {
-                        for (let i = 0; i < oneGame.data.categories.length; i++) {
-                            currentGamesSteam.categories.push(oneGame.data.categories[i].description);
-                        }
-                    }
-                    let newGameSteam = new GameSteamModel(currentGamesSteam);
-                    try {
-                        yield newGameSteam.save();
-                    }
-                    catch (error) {
-                        console.log("Une erreur s'est produite lors de la sauvegarde du jeu Steam et c'est clacké au sol : " + error);
                     }
                 }
             }
@@ -163,10 +181,6 @@ function getOneGameSteam(currentGamesSteam) {
             console.log("error dans getOneSteam" + error);
             console.log("appid qui merde : " + currentGamesSteam.appid);
         }
-        // if (!response.ok) {
-        //   throw new Error("Response not OK ! Teuteu : " + currentGamesSteam.appid);
-        // }
-        // return response.json();
     });
 }
 function getAllGameWithSteam() {
@@ -178,35 +192,6 @@ function getAllGameWithSteam() {
             throw new Error("Response not OK ! Bolosse");
         }
         return response.json();
-    });
-}
-//POUR LE MOMENT ELLE SERT A RIEN PUTAIN !!! 
-function updateGameSteam(gameData) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const { id, name, } = gameData;
-        try {
-            //Recherche du game existant avec l'ID actuel
-            const existingGame = yield GameSteamModel.findById(id);
-            if (existingGame) {
-                //Je vérifie si la donnée à changer et la modif que si elle a changé
-                //En vrai c'est nulle ! Va falloir trouver autre chose de mieux
-                if (existingGame.name !== name) {
-                    existingGame.name = name;
-                }
-                yield existingGame.save();
-            }
-            else {
-                //Le game n'existe pas donc création d'un nouveau
-                let newGame = new GameSteamModel({
-                    _id: id,
-                    name,
-                });
-                yield newGame.save();
-            }
-        }
-        catch (error) {
-            console.error("Erreur lors de l'enregistrement du gameSteam :", error);
-        }
     });
 }
 function display() {

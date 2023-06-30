@@ -18,7 +18,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 - Récupérer les donées et les ranger dans mon objet ✅
 - Stocker mon objet en base de donnée Mongo ✅
 - Edit de la DB et pas ajout systémqtique ✅
-- Jeux complet ! ❌ MANQUE COVER IGDB
+- Jeux complet ! ✅
 - le robot se lance tous les jours à 21h ❌
 --------------------------------------------------------------------
 */

@@ -56,6 +56,8 @@ const gameSchema = new mongoose_1.default.Schema({
     //INFO get TopGames Twitch
     _id: String,
     name: String,
+    firstDayInTop: Date,
+    viewersDay: Number,
     igdbId: String,
     //INFO get Games Igdb
     cover: String,
@@ -65,7 +67,7 @@ const gameSchema = new mongoose_1.default.Schema({
     platforms: [],
     involvedCompanies: [],
     streams: [streamsSchema],
-    viewerHistory: [ViewerHistorySchema] // à faire
+    viewerHistory: [ViewerHistorySchema]
 });
 //Je crée mon Model mon mon Game
 const GameModel = mongoose_1.default.model("Game", gameSchema);
@@ -137,6 +139,8 @@ function createCurrentGame(gameData) {
         const currentGame = {
             id: gameData.id,
             name: gameData.name,
+            firstDayInTop: new Date(),
+            viewersDay: 0,
             igdbId: gameData.igdb_id,
             summary: "",
             cover: "",
@@ -194,6 +198,7 @@ function updateCurrentGameWithStreams(currentGame) {
             totalViewer += gameStream.data[i].viewer_count;
             currentGame.streams.push(currentStream);
         }
+        currentGame.viewersDay = totalViewer;
         currentGame.viewerByDate = new ViewerByDate(new Date, totalViewer);
     });
 }
@@ -206,7 +211,7 @@ function getNextPageUrl(gameTopGame, url) {
 //Méthode pour update ma database avec mon currentGame
 function updateGame(gameData) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { id, name, igdbId, cover, summary, firstReleaseDate, genres, platforms, involvedCompanies, streams, viewerByDate } = gameData;
+        const { id, name, firstDayInTop, viewersDay, igdbId, cover, summary, firstReleaseDate, genres, platforms, involvedCompanies, streams, viewerByDate } = gameData;
         try {
             //Recherche du game existant avec l'ID actuel
             const existingGame = yield GameModel.findById(id);
@@ -238,6 +243,7 @@ function updateGame(gameData) {
                     existingGame.summary = summary;
                 }
                 existingGame.streams = streams;
+                existingGame.viewersDay = viewersDay;
                 existingGame.viewerHistory.push(viewerByDate);
                 yield existingGame.save();
             }
@@ -246,6 +252,8 @@ function updateGame(gameData) {
                 let newGame = new GameModel({
                     _id: id,
                     name,
+                    firstDayInTop,
+                    viewersDay,
                     igdbId,
                     cover,
                     firstReleaseDate,

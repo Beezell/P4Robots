@@ -47,6 +47,8 @@ const gameSchema = new mongoose.Schema({
   //INFO get TopGames Twitch
   _id: String,
   name: String,
+  firstDayInTop: Date,
+  viewersDay: Number,
   igdbId: String,
   //INFO get Games Igdb
   cover: String,
@@ -56,7 +58,7 @@ const gameSchema = new mongoose.Schema({
   platforms: [],
   involvedCompanies: [],
   streams: [streamsSchema],
-  viewerHistory: [ViewerHistorySchema] // à faire
+  viewerHistory: [ViewerHistorySchema]
 });
 
 //Je crée mon Model mon mon Game
@@ -128,6 +130,8 @@ async function createCurrentGame(gameData: any) {
   const currentGame = {
     id: gameData.id,
     name: gameData.name,
+    firstDayInTop: new Date(),
+    viewersDay: 0,
     igdbId: gameData.igdb_id,
     summary: "",
     cover: "",
@@ -188,8 +192,9 @@ async function updateCurrentGameWithStreams(currentGame: any) {
     );
     totalViewer += gameStream.data[i].viewer_count;
     currentGame.streams.push(currentStream);
+    
   }
-
+  currentGame.viewersDay = totalViewer;
   currentGame.viewerByDate = new ViewerByDate(new Date, totalViewer)
 
 }
@@ -207,6 +212,8 @@ async function updateGame(gameData: any) {
   const {
     id,
     name,
+    firstDayInTop,
+    viewersDay,
     igdbId,
     cover,
     summary,
@@ -250,7 +257,9 @@ async function updateGame(gameData: any) {
         existingGame.summary = summary;
       }
       existingGame.streams = streams;
+      existingGame.viewersDay = viewersDay;
       existingGame.viewerHistory.push(viewerByDate);
+
 
       await existingGame.save();
     } else {
@@ -258,6 +267,8 @@ async function updateGame(gameData: any) {
       let newGame = new GameModel({
         _id: id,
         name,
+        firstDayInTop,
+        viewersDay,
         igdbId,
         cover,
         firstReleaseDate,

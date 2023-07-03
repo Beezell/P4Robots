@@ -19,7 +19,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 - Récupérer les donées sur Steam et créé une nouvelle collection SteamGame avec le mm id que pour la collection Game ✅
 - Stocker mon objet en base de donnée Mongo : SteamGame ✅
 - Edit de la DB et pas ajout systémqtique ✅
-- le robot se lance chaque lundi matin à 8h ❌
+- le robot se lance chaque lundi matin à 00:01 ❌
 --------------------------------------------------------------------
 */
 const mongoose_1 = __importDefault(require("mongoose"));

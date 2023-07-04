@@ -54,11 +54,13 @@ function fetchGameSteam() {
     return __awaiter(this, void 0, void 0, function* () {
         //Je récupère la liste de tous les jeux de Steam
         const steamGamesAll = yield getAllGameWithSteam();
+        let cherche;
         try {
             const games = yield GameModel.find().exec();
             //Je parcours ma collection Game pour récupérer le Game
             for (let i = 0; i < games.length; i++) {
                 const gameRecover = games[i];
+                cherche = gameRecover;
                 //Je parcours la liste récupérer avec GetAllGames de Steam
                 for (let i = 0; i < steamGamesAll.applist.apps.length; i++) {
                     //Je tcheck de savoir si le nom match
@@ -85,7 +87,7 @@ function fetchGameSteam() {
             }
         }
         catch (error) {
-            console.log(" catch dans le fetch : " + error);
+            console.log(" catch dans le fetch : " + error + "/ game : " + cherche);
         }
     });
 }

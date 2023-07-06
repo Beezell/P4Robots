@@ -12,35 +12,32 @@ import mongoose from "mongoose";
 
 //Objet Streams pour le Game
 class Stream {
-    constructor(
-      public streamer: string,
-      public title: string,
-      public language: string,
-      public viewerCount: Number,
-    ) {}
-  }
+  constructor(
+    public streamer: string,
+    public title: string,
+    public language: string,
+    public viewerCount: Number
+  ) {}
+}
 
 //Je crée un schéma pour mon Streams
 const streamsSchema = new mongoose.Schema({
-    streamer: String,
-    title: String,
-    language: String,
-    viewerCount: Number
-  });
+  streamer: String,
+  title: String,
+  language: String,
+  viewerCount: Number,
+});
 
-//Objet pour l'historique des viewers 
+//Objet pour l'historique des viewers
 class ViewerByDate {
-    constructor(
-      public date: Date,
-      public viewers: Number,
-    ) {}
-  }
+  constructor(public date: Date, public viewers: Number) {}
+}
 
 //Je crée un schéma pour mon historique de viewer
 const ViewerHistorySchema = new mongoose.Schema({
   date: Date,
   viewers: Number,
-})
+});
 
 //Je crée un schéma pour mon game
 const gameSchema = new mongoose.Schema({
@@ -58,7 +55,7 @@ const gameSchema = new mongoose.Schema({
   platforms: [],
   involvedCompanies: [],
   streams: [streamsSchema],
-  viewerHistory: [ViewerHistorySchema]
+  viewerHistory: [ViewerHistorySchema],
 });
 
 //Je crée mon Model mon mon Game
@@ -66,7 +63,6 @@ const GameModel = mongoose.model("Game", gameSchema);
 
 //Méthode qui cherche mes Games et qui les enregistre sur MongoDB
 async function fetchGame() {
-
   //Requête Get TopGames API Twitch
   const urlGetTopGames = "https://api.twitch.tv/helix/games/top";
   try {
@@ -79,7 +75,6 @@ async function fetchGame() {
 
 //Méthode pour les autorisation d'identification pour Twitch
 async function sendTwitchRequest(url: any) {
-
   //Token pour l'API Twhitch et IGDB
   const authorization = "Bearer 7tb61t29r3fhaft6ux6hh64fr1sf6v";
   const clientId = "7xereixlp03cyd9lsebf4om6rensrb";
@@ -97,23 +92,22 @@ async function sendTwitchRequest(url: any) {
 }
 
 //Méthode pour passer dans chacune des pages et à chaque fois créer un game pour chacun des objets
-async function buildingGames(url: any){
+async function buildingGames(url: any) {
   try {
     //boucle : pour parcourir les pages de résultats TANT QUE url!=null
     while (url) {
       const gameTopGame = await sendTwitchRequest(url);
-      await processGameTopGame(gameTopGame,);
+      await processGameTopGame(gameTopGame);
       url = getNextPageUrl(gameTopGame, url);
     }
   } catch (error) {
     console.log("Ton Game Top il est pas ouf mais ça tu le sais : " + error);
   }
-
 }
 
 //Méthode pour créer mon game en passant par chacune des requête
 //La première des requête est GET TopGames
-async function processGameTopGame(gameTopGame: any){
+async function processGameTopGame(gameTopGame: any) {
   for (let i = 0; i < gameTopGame.data.length; i++) {
     //J'exclue tous les TopGame qui ne sont pas des games comme JustChatting par exemple
     if (gameTopGame.data[i].igdb_id !== "") {
@@ -138,7 +132,7 @@ async function createCurrentGame(gameData: any) {
     genres: [] as string[],
     platforms: [] as string[],
     involvedCompanies: [] as string[],
-    firstReleaseDate: new Date(1972, 5, 18),//1972 : premier jv et 18/05 mon anniversaire. Des bisous !
+    firstReleaseDate: new Date(1972, 5, 18), //1972 : premier jv et 18/05 mon anniversaire. Des bisous !
     streams: [] as Stream[],
     viewerByDate: ViewerByDate,
   };
@@ -152,28 +146,23 @@ async function updateCurrentGameWithIgdbData(currentGame: any) {
 
   //Je récupère les données des games et les stocks dans le currentGame
   //Pour gérer lors qu'il n'y pas de firstReleaseDate - je fais la meme pour les autres ensuite
-  if (gameIgdb[0].first_release_date != undefined) {
-    currentGame.firstReleaseDate = convertUnixEpochToDate(gameIgdb[0].first_release_date);
-  }
-  if (gameIgdb[0].cover != undefined) {
-    currentGame.cover = "https://images.igdb.com/igdb/image/upload/t_cover_big/" + gameIgdb[0].cover.image_id + ".png";
-  }
+  if (gameIgdb[0].first_release_date != undefined) currentGame.firstReleaseDate = convertUnixEpochToDate(gameIgdb[0].first_release_date);
+  if (gameIgdb[0].cover != undefined) currentGame.cover = "https://images.igdb.com/igdb/image/upload/t_cover_big/" + gameIgdb[0].cover.image_id + ".png";
   //Toutes les données avec les tableaux : genres / platforms / incolvedCompanies
-  if (gameIgdb[0].genres != undefined) {
+  if (gameIgdb[0].genres != undefined)
     for (let i = 0; i < gameIgdb[0].genres.length; i++) {
       currentGame.genres.push(gameIgdb[0].genres[i].name);
     }
-  }
-  if (gameIgdb[0].platforms != undefined) {
+  if (gameIgdb[0].platforms != undefined)
     for (let i = 0; i < gameIgdb[0].platforms.length; i++) {
       currentGame.platforms.push(gameIgdb[0].platforms[i].name);
     }
-  }
-  if (gameIgdb[0].involved_companies != undefined) {
+  if (gameIgdb[0].involved_companies != undefined)
     for (let i = 0; i < gameIgdb[0].involved_companies.length; i++) {
-      currentGame.involvedCompanies.push(gameIgdb[0].involved_companies[i].name);
+      currentGame.involvedCompanies.push(
+        gameIgdb[0].involved_companies[i].name
+      );
     }
-  }
   currentGame.summary = gameIgdb[0].summary;
 }
 
@@ -182,7 +171,7 @@ async function updateCurrentGameWithStreams(currentGame: any) {
   const urlStreams = `https://api.twitch.tv/helix/streams?game_id=${currentGame.id}`;
   const gameStream = await sendTwitchRequest(urlStreams);
   //Toutes les données pour les Streams
-  let totalViewer=0;
+  let totalViewer = 0;
   for (let i = 0; i < gameStream.data.length; i++) {
     const currentStream = new Stream(
       gameStream.data[i].user_name,
@@ -192,19 +181,16 @@ async function updateCurrentGameWithStreams(currentGame: any) {
     );
     totalViewer += gameStream.data[i].viewer_count;
     currentGame.streams.push(currentStream);
-    
   }
   currentGame.viewersDay = totalViewer;
-  currentGame.viewerByDate = new ViewerByDate(new Date, totalViewer)
-
+  currentGame.viewerByDate = new ViewerByDate(new Date(), totalViewer);
 }
 
 //Méthode pour mettre à jour l'url de la page pour la boucle
-function getNextPageUrl(gameTopGame: any, url:any){
-  
+function getNextPageUrl(gameTopGame: any, url: any) {
   return gameTopGame.pagination.cursor !== null
-  ? `${url}?first=100&after=${gameTopGame.pagination.cursor}`
-  : "";
+    ? `${url}?first=100&after=${gameTopGame.pagination.cursor}`
+    : "";
 }
 
 //Méthode pour update ma database avec mon currentGame
@@ -222,7 +208,7 @@ async function updateGame(gameData: any) {
     platforms,
     involvedCompanies,
     streams,
-    viewerByDate
+    viewerByDate,
   } = gameData;
 
   try {
@@ -232,34 +218,17 @@ async function updateGame(gameData: any) {
     if (existingGame) {
       //Je vérifie si la donnée à changer et la modif que si elle a changé
       //En vrai c'est nulle ! Va falloir trouver autre chose de mieux
-      if (existingGame.name !== name) {
-        existingGame.name = name;
-      }
-      if (existingGame.igdbId !== igdbId) {
-        existingGame.igdbId = igdbId;
-      }
-      if (existingGame.cover !== cover) {
-        existingGame.cover = cover;
-      }
-      if (existingGame.firstReleaseDate !== firstReleaseDate) {
-        existingGame.firstReleaseDate = firstReleaseDate;
-      }
-      if (existingGame.genres !== genres) {
-        existingGame.genres = genres;
-      }
-      if (existingGame.platforms !== platforms) {
-        existingGame.platforms = platforms;
-      }
-      if (existingGame.involvedCompanies !== involvedCompanies) {
-        existingGame.involvedCompanies = involvedCompanies;
-      }
-      if (existingGame.summary !== summary) {
-        existingGame.summary = summary;
-      }
+      if (existingGame.name !== name) existingGame.name = name;
+      if (existingGame.igdbId !== igdbId) existingGame.igdbId = igdbId;
+      if (existingGame.cover !== cover) existingGame.cover = cover;
+      if (existingGame.firstReleaseDate !== firstReleaseDate) existingGame.firstReleaseDate = firstReleaseDate;
+      if (existingGame.genres !== genres) existingGame.genres = genres;
+      if (existingGame.platforms !== platforms) existingGame.platforms = platforms;
+      if (existingGame.involvedCompanies !== involvedCompanies) existingGame.involvedCompanies = involvedCompanies;
+      if (existingGame.summary !== summary) existingGame.summary = summary;
       existingGame.streams = streams;
       existingGame.viewersDay = viewersDay;
       existingGame.viewerHistory.push(viewerByDate);
-
 
       await existingGame.save();
     } else {
@@ -277,10 +246,10 @@ async function updateGame(gameData: any) {
         involvedCompanies,
         summary,
         streams,
-        viewerHistory:[]
+        viewerHistory: [],
       });
 
-      newGame.viewerHistory.push(viewerByDate)
+      newGame.viewerHistory.push(viewerByDate);
       await newGame.save();
     }
   } catch (error) {
@@ -316,7 +285,9 @@ function calculateExecutionTime(startTime: any, endTime: any) {
   const seconds = Math.floor((executionTime % 60000) / 1000);
   const milliseconds = executionTime % 1000;
 
-  console.log(`Temps d'exécution du magnifique Robossein: ${minutes} minutes, ${seconds} secondes et ${milliseconds} millisecondes`);
+  console.log(
+    `Temps d'exécution du magnifique Robossein: ${minutes} minutes, ${seconds} secondes et ${milliseconds} millisecondes`
+  );
 }
 
 display();

@@ -37,9 +37,9 @@ const streamsSchema = new mongoose_1.default.Schema({
     streamer: String,
     title: String,
     language: String,
-    viewerCount: Number
+    viewerCount: Number,
 });
-//Objet pour l'historique des viewers 
+//Objet pour l'historique des viewers
 class ViewerByDate {
     constructor(date, viewers) {
         this.date = date;
@@ -67,7 +67,7 @@ const gameSchema = new mongoose_1.default.Schema({
     platforms: [],
     involvedCompanies: [],
     streams: [streamsSchema],
-    viewerHistory: [ViewerHistorySchema]
+    viewerHistory: [ViewerHistorySchema],
 });
 //Je crée mon Model mon mon Game
 const GameModel = mongoose_1.default.model("Game", gameSchema);
@@ -161,28 +161,23 @@ function updateCurrentGameWithIgdbData(currentGame) {
         const gameIgdb = yield sendTwitchRequest(urlIgdb);
         //Je récupère les données des games et les stocks dans le currentGame
         //Pour gérer lors qu'il n'y pas de firstReleaseDate - je fais la meme pour les autres ensuite
-        if (gameIgdb[0].first_release_date != undefined) {
+        if (gameIgdb[0].first_release_date != undefined)
             currentGame.firstReleaseDate = convertUnixEpochToDate(gameIgdb[0].first_release_date);
-        }
-        if (gameIgdb[0].cover != undefined) {
+        if (gameIgdb[0].cover != undefined)
             currentGame.cover = "https://images.igdb.com/igdb/image/upload/t_cover_big/" + gameIgdb[0].cover.image_id + ".png";
-        }
         //Toutes les données avec les tableaux : genres / platforms / incolvedCompanies
-        if (gameIgdb[0].genres != undefined) {
+        if (gameIgdb[0].genres != undefined)
             for (let i = 0; i < gameIgdb[0].genres.length; i++) {
                 currentGame.genres.push(gameIgdb[0].genres[i].name);
             }
-        }
-        if (gameIgdb[0].platforms != undefined) {
+        if (gameIgdb[0].platforms != undefined)
             for (let i = 0; i < gameIgdb[0].platforms.length; i++) {
                 currentGame.platforms.push(gameIgdb[0].platforms[i].name);
             }
-        }
-        if (gameIgdb[0].involved_companies != undefined) {
+        if (gameIgdb[0].involved_companies != undefined)
             for (let i = 0; i < gameIgdb[0].involved_companies.length; i++) {
                 currentGame.involvedCompanies.push(gameIgdb[0].involved_companies[i].name);
             }
-        }
         currentGame.summary = gameIgdb[0].summary;
     });
 }
@@ -199,7 +194,7 @@ function updateCurrentGameWithStreams(currentGame) {
             currentGame.streams.push(currentStream);
         }
         currentGame.viewersDay = totalViewer;
-        currentGame.viewerByDate = new ViewerByDate(new Date, totalViewer);
+        currentGame.viewerByDate = new ViewerByDate(new Date(), totalViewer);
     });
 }
 //Méthode pour mettre à jour l'url de la page pour la boucle
@@ -211,37 +206,29 @@ function getNextPageUrl(gameTopGame, url) {
 //Méthode pour update ma database avec mon currentGame
 function updateGame(gameData) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { id, name, firstDayInTop, viewersDay, igdbId, cover, summary, firstReleaseDate, genres, platforms, involvedCompanies, streams, viewerByDate } = gameData;
+        const { id, name, firstDayInTop, viewersDay, igdbId, cover, summary, firstReleaseDate, genres, platforms, involvedCompanies, streams, viewerByDate, } = gameData;
         try {
             //Recherche du game existant avec l'ID actuel
             const existingGame = yield GameModel.findById(id);
             if (existingGame) {
                 //Je vérifie si la donnée à changer et la modif que si elle a changé
                 //En vrai c'est nulle ! Va falloir trouver autre chose de mieux
-                if (existingGame.name !== name) {
+                if (existingGame.name !== name)
                     existingGame.name = name;
-                }
-                if (existingGame.igdbId !== igdbId) {
+                if (existingGame.igdbId !== igdbId)
                     existingGame.igdbId = igdbId;
-                }
-                if (existingGame.cover !== cover) {
+                if (existingGame.cover !== cover)
                     existingGame.cover = cover;
-                }
-                if (existingGame.firstReleaseDate !== firstReleaseDate) {
+                if (existingGame.firstReleaseDate !== firstReleaseDate)
                     existingGame.firstReleaseDate = firstReleaseDate;
-                }
-                if (existingGame.genres !== genres) {
+                if (existingGame.genres !== genres)
                     existingGame.genres = genres;
-                }
-                if (existingGame.platforms !== platforms) {
+                if (existingGame.platforms !== platforms)
                     existingGame.platforms = platforms;
-                }
-                if (existingGame.involvedCompanies !== involvedCompanies) {
+                if (existingGame.involvedCompanies !== involvedCompanies)
                     existingGame.involvedCompanies = involvedCompanies;
-                }
-                if (existingGame.summary !== summary) {
+                if (existingGame.summary !== summary)
                     existingGame.summary = summary;
-                }
                 existingGame.streams = streams;
                 existingGame.viewersDay = viewersDay;
                 existingGame.viewerHistory.push(viewerByDate);
@@ -262,7 +249,7 @@ function updateGame(gameData) {
                     involvedCompanies,
                     summary,
                     streams,
-                    viewerHistory: []
+                    viewerHistory: [],
                 });
                 newGame.viewerHistory.push(viewerByDate);
                 yield newGame.save();

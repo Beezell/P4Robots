@@ -97,28 +97,39 @@ function updateCurrentGameSteamWithSteam(currentGamesSteam) {
                 const oneGame = oneGameSteam[appIdKey];
                 if (oneGame.success === true) {
                     const { type, required_age, is_free, supported_languages, header_image, about_the_game, price_overview, developers, publishers, genres, categories, } = oneGame.data;
-                    if (type !== undefined)
+                    if (type !== undefined) {
                         currentGamesSteam.type = type;
-                    if (required_age !== undefined)
+                    }
+                    if (required_age !== undefined) {
                         currentGamesSteam.requiredAge = required_age;
-                    if (is_free !== undefined)
+                    }
+                    if (is_free !== undefined) {
                         currentGamesSteam.isFree = is_free;
-                    if (supported_languages !== undefined)
+                    }
+                    if (supported_languages !== undefined) {
                         currentGamesSteam.supportedLanguage = supported_languages;
-                    if (header_image !== undefined)
+                    }
+                    if (header_image !== undefined) {
                         currentGamesSteam.headerImage = header_image;
-                    if (about_the_game !== undefined)
+                    }
+                    if (about_the_game !== undefined) {
                         currentGamesSteam.aboutTheGame = about_the_game;
-                    if (price_overview !== undefined)
+                    }
+                    if (price_overview !== undefined) {
                         currentGamesSteam.price = price_overview.final_formatted;
-                    if (developers !== undefined)
+                    }
+                    if (developers !== undefined) {
                         currentGamesSteam.developers = developers;
-                    if (publishers !== undefined)
+                    }
+                    if (publishers !== undefined) {
                         currentGamesSteam.publishers = publishers;
-                    if (genres !== undefined)
+                    }
+                    if (genres !== undefined) {
                         currentGamesSteam.genres = genres.map((genre) => genre.description);
-                    if (categories !== undefined)
+                    }
+                    if (categories !== undefined) {
                         currentGamesSteam.categories = categories.map((category) => category.description);
+                    }
                     let existingGameSteam = yield GameSteamModel.findOne({
                         name: currentGamesSteam.name,
                     });

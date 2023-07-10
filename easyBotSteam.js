@@ -52,13 +52,14 @@ const GameSteamModel = mongoose_1.default.model("SteamGame", GameSteamSchema);
 //Méthode qui cherche les games de mongo et qui va requête l'api Steam pour ma collection SteamGame
 function fetchGameSteam() {
     return __awaiter(this, void 0, void 0, function* () {
+        const startTime = Date.now();
         //Je récupère la liste de tous les jeux de Steam
         const steamGamesAll = yield getAllGameWithSteam();
         try {
             const games = yield GameModel.find().exec();
-            //Je parcours ma collection Game pour récupérer le Game
-            for (let i = 0; i < games.length; i++) {
-                const gameRecover = games[i];
+            let count = 0;
+            let timeout = setInterval(() => __awaiter(this, void 0, void 0, function* () {
+                const gameRecover = games[count];
                 //Je parcours la liste récupérer avec GetAllGames de Steam
                 for (let i = 0; i < steamGamesAll.applist.apps.length; i++) {
                     //Je tcheck de savoir si le nom match
@@ -82,7 +83,15 @@ function fetchGameSteam() {
                         yield updateCurrentGameSteamWithSteam(currentGameSteam);
                     }
                 }
-            }
+                if (++count === games.length) {
+                    //++count on ajoute 1 à count puis on vérif l'égalité. Si count ++ alors on vérifie d'abord l'égalité puis on ajoute
+                    clearInterval(timeout);
+                    console.log("interval cleared");
+                    mongoose_1.default.disconnect();
+                    const endTime = Date.now();
+                    calculateExecutionTime(startTime, endTime);
+                }
+            }), 1000 /* 6000 */); // 1 seconde d'attente
         }
         catch (error) {
             console.log(" catch dans le fetch : " + error);
@@ -95,7 +104,7 @@ function updateCurrentGameSteamWithSteam(currentGamesSteam) {
         for (const appIdKey in oneGameSteam) {
             if (oneGameSteam.hasOwnProperty(appIdKey)) {
                 const oneGame = oneGameSteam[appIdKey];
-                if (oneGame.success === true) {
+                if (oneGame.success == true) {
                     const { type, required_age, is_free, supported_languages, header_image, about_the_game, price_overview, developers, publishers, genres, categories, } = oneGame.data;
                     if (type !== undefined) {
                         currentGamesSteam.type = type;
@@ -137,7 +146,8 @@ function updateCurrentGameSteamWithSteam(currentGamesSteam) {
                         existingGameSteam.type = currentGamesSteam.type;
                         existingGameSteam.requiredAge = currentGamesSteam.requiredAge;
                         existingGameSteam.isFree = currentGamesSteam.isFree;
-                        existingGameSteam.supportedLanguage = currentGamesSteam.supportedLanguage;
+                        existingGameSteam.supportedLanguage =
+                            currentGamesSteam.supportedLanguage;
                         existingGameSteam.headerImage = currentGamesSteam.headerImage;
                         existingGameSteam.aboutTheGame = currentGamesSteam.aboutTheGame;
                         existingGameSteam.price = currentGamesSteam.price;
@@ -159,7 +169,7 @@ function updateCurrentGameSteamWithSteam(currentGamesSteam) {
                             yield newGameSteam.save();
                         }
                         catch (error) {
-                            console.log("Une erreur s'est produite lors de la sauvegarde du NUVEAU jeu Steam et c'est clacké au sol : " +
+                            console.log("Une erreur s'est produite lors de la sauvegarde du NOUVEAU jeu Steam et c'est clacké au sol : " +
                                 error);
                         }
                     }
@@ -172,14 +182,12 @@ function getOneGameSteam(currentGamesSteam) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const url = `https://store.steampowered.com/api/appdetails/?appids=${currentGamesSteam.appid}`;
-            // pour l'avoir en fr : à la fin de la requête rajouter '&l=french'
             //Utilise la requête et les autorisation
             const response = yield fetch(url);
             return response.json();
         }
         catch (error) {
             console.log("error dans getOneSteam" + error);
-            console.log("appid qui merde : " + currentGamesSteam.appid);
         }
     });
 }
@@ -196,15 +204,11 @@ function getAllGameWithSteam() {
 }
 function display() {
     return __awaiter(this, void 0, void 0, function* () {
-        const startTime = Date.now();
         //J'ouvre le flux vers mongoDB
         mongoose_1.default.connect("mongodb://127.0.0.1:27017/pixelhunt_db");
         console.log("Connexion à MongoDB avec le sourire !");
         yield fetchGameSteam();
-        mongoose_1.default.disconnect();
         console.log("On ferme MongoDB à clef svp");
-        const endTime = Date.now();
-        calculateExecutionTime(startTime, endTime);
     });
 }
 //Pour moi : pour savoir combien de temps ça met
